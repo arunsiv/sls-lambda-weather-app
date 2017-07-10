@@ -8,12 +8,24 @@ const log = (event) => {
   return Promise.resolve(event);
 };
 
+var result = null;
 const getWeather = (event) => {
-  var encodedAddress = encodeURIComponent(event.address);
+  console.log("1...");
+  console.log('Event', JSON.stringify(event, null, 2));
+  var encodedAddress = null;
+
+  if (event.queryStringParameters !== null && event.queryStringParameters !== undefined) {
+    if (event.queryStringParameters.address !== undefined && event.queryStringParameters.address !== null && event.queryStringParameters.address !== "") {
+	  console.log("2...");
+      encodedAddress = event.queryStringParameters.address;
+	}
+  }
+
   console.log("encodedAddress: " + encodedAddress);
   var geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedAddress}`;
 
   axios.get(geocodeUrl).then((response) => {
+      console.log("3...");
       if (response.data.status === 'ZERO_RESULTS') {
         throw new Error('Unable to find that address.');
       }
@@ -24,18 +36,23 @@ const getWeather = (event) => {
       console.log("Formatted Address: " + response.data.results[0].formatted_address);
       return axios.get(weatherUrl);
     }).then((response) => {
+      console.log("4...");
       var temperature = response.data.currently.temperature;
       var apparentTemperature = response.data.currently.apparentTemperature;
       console.log(`It's currently ${temperature}. It feels like ${apparentTemperature}.`);
 
-      var newResponse = {
-        "temperature": temperature,
-        "apparentTemperature": apparentTemperature
+      result = {
+        statusCode: 200,
+        body: JSON.stringify({
+          message: `It's currently ${temperature}. It feels like ${apparentTemperature}.`,
+          input: event,
+        }),
       };
-      console.log("Response: " + JSON.stringify(newResponse, null, 2));
 
-      return Object.assign(event, { newResponse });
+      console.log(`Response : ${result}`);
+
     }).catch((e) => {
+      console.log("5...");
       if (e.code === 'ENOTFOUND') {
         console.log('Unable to connect to API servers.');
       } else {
@@ -44,7 +61,15 @@ const getWeather = (event) => {
   });
 }
 
-module.exports.handler = (event, context, callback) => log(event)
-  .then(getWeather) // Get Weather information
-  //.then(() => callback(null)) // Success
-  .catch(callback); // Error
+module.exports.handler = (event, context, callback) =>
+  Promise.resolve(event)
+    .then(getWeather) // Get Weather information
+    .then(() => {
+      console.log("6...");
+      callback(null, result);
+      console.log("7...");
+    })
+    .catch((e) => {
+      console.log("8...");
+      callback(e);
+    });

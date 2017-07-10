@@ -22,4 +22,4 @@ functions:
     events:
       - http:
           path: weather
-          method: post
+          method: get
