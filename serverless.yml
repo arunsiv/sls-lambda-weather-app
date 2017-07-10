@@ -1,0 +1,25 @@
+service: weather-app
+
+frameworkVersion: "<=1.17.0"
+
+custom:
+  namespace: ${self:service}-${self:custom.stage}
+  stage: ${opt:stage, self:provider.stage}
+
+provider:
+  name: aws
+  runtime: nodejs6.10
+  stage: dev
+  region: us-east-1
+  environment:
+    INSTALL_ERROR_URL: http://serverlessslackbot.s3-website-us-east-1.amazonaws.com/#error
+    INSTALL_SUCCESS_URL: http://serverlessslackbot.s3-website-us-east-1.amazonaws.com/#success
+    NAMESPACE: ${self:custom.namespace}
+
+functions:
+  weather:
+    handler: weather.handler
+    events:
+      - http:
+          path: weather
+          method: post
